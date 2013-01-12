@@ -9,13 +9,15 @@ class BotFactory(protocol.ClientFactory):
 
     # The factory needs the protocol class to make a new connection
 
-    def __init__(self, channel, nickname, log_folder):
+    def __init__(self, channel, nickname, data_folder):
         self.channel = channel
         self.protocol = IRCBot
         self.nickname = nickname
-        if not os.path.exists(log_folder):
-            os.makedirs(log_folder)
-        self.log_filename = log_folder + self.nickname + ".log"
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
+        self.data_folder = data_folder
+        self.log_filename = self.data_folder + self.nickname + ".log"
+
 
     def connect(self, server_address, port):
         """Connect the factory to the host/port and pass the factory itself"""

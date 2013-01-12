@@ -1,8 +1,10 @@
 import time
 import sys
+import re
 from twisted.words.protocols import irc
 
 from message_logger import MessageLogger
+from karma.karma_manager import KarmaManager
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -22,6 +24,7 @@ class IRCBot(irc.IRCClient):
             "[connected at %s]" %
             time.asctime(time.localtime(time.time()))
         )
+        self.karma_manager = KarmaManager(self.factory.data_folder)
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -67,3 +70,33 @@ class IRCBot(irc.IRCClient):
             msg = "%s: I am BOT, do not waste your time!" % user
             self.msg(channel, msg)
             self.logger.log("<%s> %s" % (self.nickname, msg))
+        elif msg.startswith('!'):
+            self.evaluate_command(user, channel, msg)
+        #elif msg.endswith( ("++","--") ):
+        elif re.match(re.compile('\w+\+\+|\w+--'), msg):
+            self.karma_update(user, channel, msg)
+
+    def evaluate_command(self, user, channel, msg):
+        # check for commands starting with bang!
+        if msg.startswith('!karma'):
+            print("<%s> send a karma command: %s" % (user,msg))
+            msg_splits = msg.split()
+            if len(msg_splits) == 1:
+                fetch_user = user
+            elif len(msg_splits) == 2:
+                fetch_user = msg_splits[1]
+
+            self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
+
+    def karma_update(self, user, channel, msg):
+            nickname = msg[:-2]
+            print "karma command: %s. user affected: %s" % (msg, nickname)
+            if nickname == user:
+                self.msg(channel, "%s: you can't alter your own karma!" % user)
+                return
+            if msg.endswith('++'):
+                self.karma_manager.update_karma(nickname, plus=True)
+            if msg.endswith('--'):
+                self.karma_manager.update_karma(nickname, plus=False)
+
+

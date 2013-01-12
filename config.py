@@ -46,3 +46,7 @@ class ConfigManager(object):
     @property
     def base_folder(self):
         return self._base_path
+
+    @property
+    def data_path(self):
+        return self._data_path
