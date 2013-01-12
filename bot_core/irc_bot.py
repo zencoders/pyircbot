@@ -5,6 +5,7 @@ from twisted.words.protocols import irc
 
 from message_logger import MessageLogger
 from karma.karma_manager import KarmaManager
+from karma.karma_rate import KarmaRateLimiter
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -25,13 +26,11 @@ class IRCBot(irc.IRCClient):
             time.asctime(time.localtime(time.time()))
         )
         self.karma_manager = KarmaManager(self.factory.data_folder)
+        self.karmrator = KarmaRateLimiter()
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
-        self.logger.log(
-            "[disconnected at %s]" %
-            time.asctime(time.localtime(time.time()))
-        )
+        self.logger.log("[disconnected at %s]" % self.get_current_timestamp() )
         self.logger.close()
 
     # TODO (sentenza) ConfigManager password
@@ -79,7 +78,6 @@ class IRCBot(irc.IRCClient):
     def evaluate_command(self, user, channel, msg):
         # check for commands starting with bang!
         if msg.startswith('!karma'):
-            print("<%s> send a karma command: %s" % (user,msg))
             msg_splits = msg.split()
             if len(msg_splits) == 1:
                 fetch_user = user
@@ -89,14 +87,22 @@ class IRCBot(irc.IRCClient):
             self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
 
     def karma_update(self, user, channel, msg):
-            nickname = msg[:-2]
-            print "karma command: %s. user affected: %s" % (msg, nickname)
-            if nickname == user:
-                self.msg(channel, "%s: you can't alter your own karma!" % user)
-                return
-            if msg.endswith('++'):
-                self.karma_manager.update_karma(nickname, plus=True)
-            if msg.endswith('--'):
-                self.karma_manager.update_karma(nickname, plus=False)
+        """Try to modify the Karma for a given nickname"""
+        receiver_nickname = msg[:-2]
+        # TODO (sentenza) Check if the given nick is present on DB or if is on chan with /WHO command
+        if receiver_nickname == user:
+            self.msg(channel, "%s: you can't alter your own karma!" % user)
+            return
+        if self.karmrator.is_rate_limited(user):
+            waiting_minutes = self.karmrator.user_timeout(user) / 60
+            self.msg(channel, "%s: you have to wait %s min for your next karmic request!" % (user, waiting_minutes))
+            return
+        if msg.endswith('++'):
+            self.karma_manager.update_karma(receiver_nickname, plus=True)
+        if msg.endswith('--'):
+            self.karma_manager.update_karma(receiver_nickname, plus=False)
+        self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
+        self.logger.log("%s modified Karma: %s" % (user, receiver_nickname))
 
-
+    def get_current_timestamp(self):
+        return time.asctime(time.localtime(time.time()))
