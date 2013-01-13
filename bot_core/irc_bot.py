@@ -14,6 +14,16 @@ class IRCBot(irc.IRCClient):
         return self.factory.nickname
     nickname = property(_get_nickname)
 
+    def _help_command(self, command=None):
+        help_msg = "Valid commands: !help <command>, !commands, !karma"
+        if command is not None:
+            if command == "karma":
+                help_msg = "!karma [user]: returns user's karma score.  "
+                help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
+            else:
+                help_msg = "%s is not a valid command!" % command
+        return help_msg
+
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         try:
@@ -56,9 +66,8 @@ class IRCBot(irc.IRCClient):
         user = user.split('!', 1)[0]
         self.logger.log("<%s> %s" % (user, msg))
         
-        # Check to see if they're sending me a private message
         if channel == self.nickname:
-            msg = "It isn't nice to whisper!  Play nice with the group."
+            msg = "It's useless to query this BOT. Consider using !help in #", self.factory.channel
             self.msg(user, msg)
             return
 
@@ -76,15 +85,21 @@ class IRCBot(irc.IRCClient):
             self.karma_update(user, channel, msg)
 
     def evaluate_command(self, user, channel, msg):
+        msg_splits = msg.split()
         # check for commands starting with bang!
         if msg.startswith('!karma'):
-            msg_splits = msg.split()
             if len(msg_splits) == 1:
                 fetch_user = user
             elif len(msg_splits) == 2:
                 fetch_user = msg_splits[1]
-
             self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
+        elif msg.startswith( ('!commands', '!help') ):
+            if len(msg_splits) == 1:
+                self.msg(channel, self._help_command() )
+            elif len(msg_splits) == 2:
+                self.msg(channel, self._help_command(msg_splits[1]) )
+                
+
 
     def karma_update(self, user, channel, msg):
         """Try to modify the Karma for a given nickname"""
