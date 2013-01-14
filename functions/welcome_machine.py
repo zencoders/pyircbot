@@ -18,4 +18,4 @@ class WelcomeMachine:
         """Say hi to nickname."""
         ave = random.choice(self.welcomes)
         if '%s' in ave:
-            return ave % nickname
+            return (ave % nickname).rstrip()

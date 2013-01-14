@@ -107,7 +107,7 @@ class IRCBot(irc.IRCClient):
             elif len(msg_splits) == 2:
                 self.msg(channel, self._help_command(msg_splits[1]) )
                 
-    def UserJoined(self, user, channel):
+    def userJoined(self, user, channel):
         """Called when a user joins the channel"""
         ciao_msg = self.welcome_machine.ciao(user)
         self.msg(channel, ciao_msg)
