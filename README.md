@@ -1,7 +1,7 @@
 pyircbot
 ========
 
-A simple python-twisted IRC bot with greetings and karma functionalities.
+A simple python-twisted IRC bot with greetings and karma functionalities. Presently pyircbot has **NOT** chat logging features.
 
 ### Usage
 

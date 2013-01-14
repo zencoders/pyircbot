@@ -17,7 +17,7 @@ if __name__ == '__main__':
     usage = """usage: %prog [options]
     ** Basic configuration file 'bot.conf' could be used instead"""
     parser = optparse.OptionParser(usage)
-    parser.add_option("-s", "--server", dest="server",
+    parser.add_option("-s", "--server", dest="server_address",
                     action="store",
                     default = config_manager.server_address,
                     help="IRC server address, default %s" % config_manager.server_address)
@@ -35,21 +35,26 @@ if __name__ == '__main__':
                     action="store",
                     default = config_manager.bot_nick,
                     help="Bot nickname %s" % config_manager.bot_nick)
-    # TODO (sentenza) use the config manager class
     parser.add_option("-v", "--verbose", dest="verbose",
                     action="store_true",
                     help="Print a lot of stuff...")
     options, args = parser.parse_args()
 
-    # TODO (sentenza) Check the possibility of writing the config file via optparse args
-    #if not options.network and not options.channel:
-    #    parser.error('Must choose one-- try -n or -c')
+    # Set options to ConfigManager
+    config_manager.server_address = options.server_address
+    config_manager.server_port = options.port
+    config_manager.channel = options.channel
+    config_manager.bot_nick = options.nick
+    config_manager.verbose = options.verbose
 
-    data_path = config_manager.base_folder + options.channel + "-data/"
-    if options.verbose:
+    #if not options.<something>:
+    #    parser.error('Must choose one option try -n or -c or --help')
+
+    data_path = config_manager.data_path
+    if config_manager.verbose:
         print "Storing BOT data in ", data_path
     
     # Building the factory and passing the Protocol as the second argument
-    factory = BotFactory(options.channel, options.nick, data_path)
-    factory.connect(options.server, options.port)
+    factory = BotFactory()
+    factory.connect()
     factory.run()

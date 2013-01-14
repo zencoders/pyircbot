@@ -35,7 +35,7 @@ class IRCBot(irc.IRCClient):
             "[connected at %s]" %
             time.asctime(time.localtime(time.time()))
         )
-        self.karma_manager = KarmaManager(self.factory.data_folder)
+        self.karma_manager = KarmaManager()
         self.karmrator = KarmaRateLimiter()
 
     def connectionLost(self, reason):

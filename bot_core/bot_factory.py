@@ -1,28 +1,31 @@
 import os
 from twisted.internet import protocol, reactor
 from irc_bot import IRCBot
+from config import ConfigManager
 
 class BotFactory(protocol.ClientFactory):
     """
     A ClientFactory for BasicIRCbot.
     """
 
-    # The factory needs the protocol class to make a new connection
-
-    def __init__(self, channel, nickname, data_folder):
-        self.channel = channel
+    def __init__(self):
+        self.cm = ConfigManager()
+        self.channel = self.cm.channel
         self.protocol = IRCBot
-        self.nickname = nickname
-        if not os.path.exists(data_folder):
-            os.makedirs(data_folder)
-        self.data_folder = data_folder
+        # The factory needs the protocol class to make a new connection
+        self.nickname = self.cm.bot_nick
+        if not os.path.exists(self.cm.data_path):
+            os.makedirs(self.cm.data_path)
+        self.data_folder = self.cm.data_path
         self.log_filename = self.data_folder + self.nickname + ".log"
 
 
-    def connect(self, server_address, port):
+    def connect(self):
         """Connect the factory to the host/port and pass the factory itself"""
-        print "Connecting to %s:%s" % (server_address,  port)
-        reactor.connectTCP(server_address, port, self)
+        address = self.cm.server_address
+        port = self.cm.server_port
+        print "Connecting to %s:%s" % (address,  port)
+        reactor.connectTCP(address, port, self)
 
     def clientConnectionLost(self, connector, reason):
         """If we get disconnected, reconnect to server."""

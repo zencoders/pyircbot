@@ -1,11 +1,12 @@
 import time
 import sqlite3
+from config import ConfigManager
 
 class KarmaManager():
 
-    def __init__(self, data_folder):
-        self.db_path = data_folder + "karma.sqlite"
-        # TODO (sentenza) use ConfigManager instead
+    def __init__(self):
+        self.conf = ConfigManager()
+        self.db_path = self.conf.data_path + "karma.sqlite"
         self.karma_table = "karma"
         self.create_table()
 
@@ -55,5 +56,3 @@ class KarmaManager():
             cursor.execute("""
                 INSERT INTO %s values (?,?,?)
                 """ % self.karma_table, (timestamp, nick, score))
-
-
