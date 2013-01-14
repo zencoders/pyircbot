@@ -8,7 +8,6 @@ class ConfigManager(object):
     __metaclass__ = Singleton
 
     def __init__(self):
-        print "construct myself!"
         # http://stackoverflow.com/a/4060259
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
         self.base_folder = __location__ + '/'
@@ -37,7 +36,13 @@ class ConfigManager(object):
         self._channel = self._config_parser.get('pyircbot', 'channel')
         self._bot_nick = self._config_parser.get('pyircbot', 'nick')
         self._verbose = False
-        self._data_path = self.base_folder + self.channel + "-data/"
+        self._update_data_path()
+
+    def _update_data_path(self):
+        """Internal method called to update information about data folder. Data folder path depends on channel name."""
+        self._data_path = self.base_folder + self.channel + "_data/"
+        self.stateful_data_path = self.base_folder + "stateful_data/"
+        self.greetings_file_path = self.stateful_data_path + "greetings.txt"
 
     # Decorators properties
     @property
@@ -63,6 +68,7 @@ class ConfigManager(object):
     @channel.setter
     def channel(self, value):
         self._channel = value
+        self._update_data_path()
     
     @property
     def bot_nick(self):

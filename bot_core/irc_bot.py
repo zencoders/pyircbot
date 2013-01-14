@@ -6,6 +6,7 @@ from twisted.words.protocols import irc
 from message_logger import MessageLogger
 from karma.karma_manager import KarmaManager
 from karma.karma_rate import KarmaRateLimiter
+from functions.welcome_machine import WelcomeMachine
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -37,6 +38,8 @@ class IRCBot(irc.IRCClient):
         )
         self.karma_manager = KarmaManager()
         self.karmrator = KarmaRateLimiter()
+        # Singleton WelcomeMachine class
+        self.welcome_machine = WelcomeMachine(self.factory.cm.greetings_file_path)
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -85,6 +88,8 @@ class IRCBot(irc.IRCClient):
             self.karma_update(user, channel, msg)
 
     def evaluate_command(self, user, channel, msg):
+        if self.factory.cm.verbose:
+            print "<%s> sends command: %s" % (user,msg)
         msg_splits = msg.split()
         # check for commands starting with bang!
         if msg.startswith('!karma'):
@@ -93,13 +98,19 @@ class IRCBot(irc.IRCClient):
             elif len(msg_splits) == 2:
                 fetch_user = msg_splits[1]
             self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
+        elif msg.startswith('!ciao'):
+            if len(msg_splits) == 2:
+                self.msg(channel, self.welcome_machine.ciao(msg_splits[1]))
         elif msg.startswith( ('!commands', '!help') ):
             if len(msg_splits) == 1:
                 self.msg(channel, self._help_command() )
             elif len(msg_splits) == 2:
                 self.msg(channel, self._help_command(msg_splits[1]) )
                 
-
+    def UserJoined(self, user, channel):
+        """Called when a user joins the channel"""
+        ciao_msg = self.welcome_machine.ciao(user)
+        self.msg(channel, ciao_msg)
 
     def karma_update(self, user, channel, msg):
         """Try to modify the Karma for a given nickname"""

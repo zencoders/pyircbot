@@ -11,7 +11,7 @@ class KarmaManager():
         self.create_table()
 
     def db_commit(method):
-        """Decorator that manage DB connection, commit, and close"""
+        """Decorator method for managing DB connection, commit, and close"""
         # closure
         def inner_procedure(self, *args, **kwargs):
             connection = sqlite3.connect(self.db_path)

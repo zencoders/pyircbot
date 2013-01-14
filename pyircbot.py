@@ -15,7 +15,8 @@ from bot_core.bot_factory import BotFactory
 if __name__ == '__main__':
     config_manager = ConfigManager()
     usage = """usage: %prog [options]
-    ** Basic configuration file 'bot.conf' could be used instead"""
+    * Basic configuration file 'bot.conf' could be used instead
+    ** Information will be stored in a directory called<CHANNEL>-data"""
     parser = optparse.OptionParser(usage)
     parser.add_option("-s", "--server", dest="server_address",
                     action="store",
@@ -50,11 +51,9 @@ if __name__ == '__main__':
     #if not options.<something>:
     #    parser.error('Must choose one option try -n or -c or --help')
 
-    data_path = config_manager.data_path
     if config_manager.verbose:
-        print "Storing BOT data in ", data_path
+        print "Information will be stored in ", config_manager.data_path
     
-    # Building the factory and passing the Protocol as the second argument
     factory = BotFactory()
     factory.connect()
     factory.run()
