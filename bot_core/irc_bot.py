@@ -3,6 +3,7 @@ import sys
 import re
 import random
 from twisted.words.protocols import irc
+from twisted.internet import threads, reactor
 
 from message_logger import MessageLogger
 from karma.karma_manager import KarmaManager
@@ -15,16 +16,6 @@ class IRCBot(irc.IRCClient):
     def _get_nickname(self):
         return self.factory.nickname
     nickname = property(_get_nickname)
-
-    def _help_command(self, command=None):
-        help_msg = "Valid commands: !help <command>, !commands, !karma"
-        if command is not None:
-            if command == "karma":
-                help_msg = "!karma [user]: returns user's karma score.  "
-                help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
-            else:
-                help_msg = "%s is not a valid command!" % command
-        return help_msg
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
@@ -54,21 +45,31 @@ class IRCBot(irc.IRCClient):
             self.msg('NickServ', 'RELEASE %s %s' % (self.nickname, self.password))
             self.msg('NickServ', 'IDENTIFY %s %s' % (self.nickname, self.password))
 
+
     def signedOn(self):
+
         """Called when bot has succesfully signed on to server."""
+
         self.join(self.factory.channel)
         self.identify()
 
+
     def action(self, user, channel, msg):
+
         """This will get called when the bot sees someone do an action."""
+
         # e.g. /me <action>
         user = user.split('!', 1)[0]
         self.logger.log("* %s %s" % (user, msg))
 
+
     def privmsg(self, user, channel, msg):
+
         """This will get called when the bot receives a message."""
+
         user = user.split('!', 1)[0]
         words = msg.split()
+
         
         if channel == self.nickname:
             msg = "It's useless to query this BOT. Consider using !help in #", self.factory.channel
@@ -84,7 +85,7 @@ class IRCBot(irc.IRCClient):
             self.logger.log("<%s> %s" % (self.nickname, msg))
         elif msg.startswith('!'):
             self.evaluate_command(user, channel, msg)
-        elif re.match(re.compile('\w+\+\+|\w+--'), msg):
+        elif re.match(re.compile('\w+\+\+$|\w+--$'), msg):
             self.karma_update(user, channel, msg)
         elif words is not None and len(words) == 2: 
             if words[0].lower().startswith( ( 'hi', 'hello', 'ciao', 'hola') ) and words[1] == n:
@@ -96,14 +97,22 @@ class IRCBot(irc.IRCClient):
             self.logger.log("<%s> %s" % (user, msg))
             print "<%s> sends command: %s" % (user,msg)
         msg_splits = msg.split()
+
         # check for commands starting with bang!
         if msg.startswith('!karma'):
+            
             if len(msg_splits) == 1:
                 fetch_user = user
             elif len(msg_splits) == 2:
                 fetch_user = msg_splits[1]
-            else: return
-            self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
+            else: # !karma first two etc
+                return
+
+            # self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
+            # Deferred call 
+            deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, nick=fetch_user)
+            deferred_fetch.addCallback(self.threadSafeMsg)
+
         elif msg.startswith( ('!commands', '!help') ):
             if len(msg_splits) == 1:
                 self.msg(channel, self._help_command() )
@@ -130,14 +139,42 @@ class IRCBot(irc.IRCClient):
         if limit == 1:
             # Penalize User
             self.msg(channel, "%s: I warned you... Now you have lost karma. :(" % user )
-            self.karma_manager.update_karma(user, plus=False)
+            threads.deferToThread(self.karma_manager.update_karma, user, plus=False)
             return
         if msg.endswith('++'):
-            self.karma_manager.update_karma(receiver_nickname, plus=True)
+            threads.deferToThread(self.karma_manager.update_karma, receiver_nickname, plus=True)
         if msg.endswith('--'):
-            self.karma_manager.update_karma(receiver_nickname, plus=False)
-        self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
+            threads.deferToThread( self.karma_manager.update_karma, receiver_nickname, plus=False)
+    
+        deferred_fetch_update = threads.deferToThread(self.karma_manager.fetch_karma, nick=receiver_nickname)
+        deferred_fetch_update.addCallback(self.threadSafeMsg)
+
+        #self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
         self.logger.log("%s modified Karma: %s" % (user, receiver_nickname))
+
+
+    def threadSafeMsg(self, message):
+
+        """Callback Thread-safe method. Thread created by threads.deferToThread cannot just call 
+        IRCClient.msg, since that method is not thread-safe."""
+
+        # see https://github.com/zencoders/pyircbot/issues/3
+        chan = "#" + self.factory.channel
+        reactor.callFromThread(self.msg, chan , message)
 
     def get_current_timestamp(self):
         return time.asctime(time.localtime(time.time()))
+
+    def _help_command(self, command=None):
+        
+        """This method returns the help message"""
+
+        help_msg = "Valid commands: !help <command>, !commands, !karma"
+        if command is not None:
+            if command == "karma":
+                help_msg = "!karma [user]: returns user's karma score.  "
+                help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
+            else:
+                help_msg = "%s is not a valid command!" % command
+        return help_msg
+

@@ -25,7 +25,9 @@ class KarmaManager():
 
     @db_commit
     def create_table(self, cursor):
-        # Check the existence of the karma log table
+        """ Check the existence of the karma log table, 
+        otherwise create it """
+
         cursor.execute("""
                         CREATE TABLE IF NOT EXISTS %s  (
                         time INTEGER NOT NULL,
@@ -34,9 +36,12 @@ class KarmaManager():
                     )
                     """ % self.karma_table )
 
+
     @db_commit 
     def fetch_karma(self, cursor, nick=None):
-        """Return the value of Karma for a specific user"""
+        
+        """Returns a message with the value of Karma for a specific user"""
+
         if nick:
             cursor.execute("SELECT score FROM %s WHERE nick=?" % self.karma_table, (nick,))
             karma_score = cursor.fetchone()
@@ -44,8 +49,12 @@ class KarmaManager():
                 return "Karma is inscrutable for %s" % nick
             return "%s: %s" % (nick, karma_score[0])
 
+
     @db_commit
     def update_karma(self, cursor, nick, plus=True):
+
+        """Updates the karma value of a user via its nickname"""
+
         score = 1 if plus else -1
         timestamp = int(time.time())
         cursor.execute("""
