@@ -40,7 +40,7 @@ class KarmaManager():
     @db_commit 
     def fetch_karma(self, cursor, nick=None):
         
-        """Returns a message with the value of Karma for a specific user"""
+        """Returns a message with the value of Karma for a specific user (fetched by his nickname)"""
 
         if nick:
             cursor.execute("SELECT score FROM %s WHERE nick=?" % self.karma_table, (nick,))
@@ -53,7 +53,7 @@ class KarmaManager():
     @db_commit
     def update_karma(self, cursor, nick, plus=True):
 
-        """Updates the karma value of a user via its nickname"""
+        """Updates the karma value of a user via his nickname"""
 
         score = 1 if plus else -1
         timestamp = int(time.time())
@@ -64,3 +64,4 @@ class KarmaManager():
             cursor.execute("""
                 INSERT INTO %s values (?,?,?)
                 """ % self.karma_table, (timestamp, nick, score))
+        return "Karma hits %s" % nick

@@ -139,15 +139,19 @@ class IRCBot(irc.IRCClient):
         if limit == 1:
             # Penalize User
             self.msg(channel, "%s: I warned you... Now you have lost karma. :(" % user )
-            threads.deferToThread(self.karma_manager.update_karma, user, plus=False)
+            deferred_update = threads.deferToThread(self.karma_manager.update_karma, user, plus=False)
             return
         if msg.endswith('++'):
-            threads.deferToThread(self.karma_manager.update_karma, receiver_nickname, plus=True)
+            deferred_update = threads.deferToThread(self.karma_manager.update_karma, receiver_nickname, plus=True)
         if msg.endswith('--'):
-            threads.deferToThread( self.karma_manager.update_karma, receiver_nickname, plus=False)
+            deferred_update = threads.deferToThread( self.karma_manager.update_karma, receiver_nickname, plus=False)
+
+        deferred_update.addCallback(self.threadSafeMsg)
     
-        deferred_fetch_update = threads.deferToThread(self.karma_manager.fetch_karma, nick=receiver_nickname)
-        deferred_fetch_update.addCallback(self.threadSafeMsg)
+        # TODO (sentenza) add a callback with the fetch operation after a deferred_update ? See #3
+        # Not synchronized!
+        # deferred_fetch_update = threads.deferToThread(self.karma_manager.fetch_karma, nick=receiver_nickname)
+        # deferred_fetch_update.addCallback(self.threadSafeMsg)
 
         #self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
         self.logger.log("%s modified Karma: %s" % (user, receiver_nickname))
