@@ -36,9 +36,16 @@ if __name__ == '__main__':
                     action="store",
                     default = config_manager.bot_nick,
                     help="Bot nickname %s" % config_manager.bot_nick)
+    parser.add_option("-g", "--greeting", dest="greeting_probability",
+                    action="store",
+                    type="int",
+                    default = 30,
+                    help="Greeting probability [1 - 100]")
     parser.add_option("-v", "--verbose", dest="verbose",
                     action="store_true",
                     help="Print a lot of stuff...")
+
+ 
     options, args = parser.parse_args()
 
     # Set options to ConfigManager
@@ -47,6 +54,7 @@ if __name__ == '__main__':
     config_manager.channel = options.channel
     config_manager.bot_nick = options.nick
     config_manager.verbose = options.verbose
+    config_manager.greeting_probability = options.greeting_probability
 
     #if not options.<something>:
     #    parser.error('Must choose one option try -n or -c or --help')

@@ -37,6 +37,7 @@ class ConfigManager(object):
         self._bot_nick = self._config_parser.get('pyircbot', 'nick')
         self._verbose = False
         self._update_data_path()
+        self.greeting_probability = 30
 
     def _update_data_path(self):
         """Internal method called to update information about data folder. Data folder path depends on channel name."""

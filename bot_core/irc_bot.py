@@ -1,6 +1,7 @@
 import time
 import sys
 import re
+import random
 from twisted.words.protocols import irc
 
 from message_logger import MessageLogger
@@ -97,10 +98,8 @@ class IRCBot(irc.IRCClient):
                 fetch_user = user
             elif len(msg_splits) == 2:
                 fetch_user = msg_splits[1]
+            else: return
             self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
-        elif msg.startswith('!ciao'):
-            if len(msg_splits) == 2:
-                self.msg(channel, self.welcome_machine.ciao(msg_splits[1]))
         elif msg.startswith( ('!commands', '!help') ):
             if len(msg_splits) == 1:
                 self.msg(channel, self._help_command() )
@@ -108,20 +107,26 @@ class IRCBot(irc.IRCClient):
                 self.msg(channel, self._help_command(msg_splits[1]) )
                 
     def userJoined(self, user, channel):
-        """Called when a user joins the channel"""
+        """Called when a user joins the channel (10% chance)"""
         ciao_msg = self.welcome_machine.ciao(user)
-        self.msg(channel, ciao_msg)
+        if random.randint(1,100) <= self.factory.cm.greeting_probability:
+            self.msg(channel, ciao_msg)
 
     def karma_update(self, user, channel, msg):
         """Try to modify the Karma for a given nickname"""
         receiver_nickname = msg[:-2]
-        # TODO (sentenza) Check if the given nick is present on DB or if is on chan with /WHO command
         if receiver_nickname == user:
             self.msg(channel, "%s: you can't alter your own karma!" % user)
             return
-        if self.karmrator.is_rate_limited(user):
-            waiting_minutes = self.karmrator.user_timeout(user) / 60
-            self.msg(channel, "%s: you have to wait %s min for your next karmic request!" % (user, waiting_minutes))
+        limit = self.karmrator.rate_limit(user)
+        if  limit == 2:
+            waiting_minutes = self.karmrator.user_timeout(user)
+            self.msg(user, "%s: you have to wait %s sec for your next karmic request!" % (user, waiting_minutes))
+            return
+        if limit == 1:
+            # Penalize User
+            self.msg(channel, "%s: I warned you... Now you have lost karma. :(" % user )
+            self.karma_manager.update_karma(user, plus=False)
             return
         if msg.endswith('++'):
             self.karma_manager.update_karma(receiver_nickname, plus=True)

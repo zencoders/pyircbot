@@ -40,10 +40,9 @@ class KarmaManager():
         if nick:
             cursor.execute("SELECT score FROM %s WHERE nick=?" % self.karma_table, (nick,))
             karma_score = cursor.fetchone()
-            if not karma_score:
+            if karma_score is None:
                 return "Karma is inscrutable for %s" % nick
-            else:
-                return "%s has karma of %s" % (nick, karma_score[0])
+            return "%s: %s" % (nick, karma_score[0])
 
     @db_commit
     def update_karma(self, cursor, nick, plus=True):
