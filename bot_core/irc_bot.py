@@ -68,7 +68,7 @@ class IRCBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
         user = user.split('!', 1)[0]
-        self.logger.log("<%s> %s" % (user, msg))
+        words = msg.split()
         
         if channel == self.nickname:
             msg = "It's useless to query this BOT. Consider using !help in #", self.factory.channel
@@ -84,12 +84,16 @@ class IRCBot(irc.IRCClient):
             self.logger.log("<%s> %s" % (self.nickname, msg))
         elif msg.startswith('!'):
             self.evaluate_command(user, channel, msg)
-        #elif msg.endswith( ("++","--") ):
         elif re.match(re.compile('\w+\+\+|\w+--'), msg):
             self.karma_update(user, channel, msg)
+        elif words is not None and len(words) == 2: 
+            if words[0].lower().startswith( ( 'hi', 'hello', 'ciao', 'hola') ) and words[1] == n:
+                polite_msg = self.welcome_machine.ciao(user)
+                self.msg(channel, polite_msg)
 
     def evaluate_command(self, user, channel, msg):
         if self.factory.cm.verbose:
+            self.logger.log("<%s> %s" % (user, msg))
             print "<%s> sends command: %s" % (user,msg)
         msg_splits = msg.split()
         # check for commands starting with bang!
