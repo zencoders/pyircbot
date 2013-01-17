@@ -1,9 +1,15 @@
-import praw
+import sys
+try:
+    import praw
+except ImportError, e:
+    sys.stderr.write(e)
 import random
 
 MAX_ENTRIES = 10 # max articles returned
 
 class RedditManager:
+
+    """Manager for reddit entries. It's based on top of the Python Reddit API Wrapper"""
 
     def __init__(self):
         bot_user_agent = "pyircbot v0.1 by /u/sentenza github.com/zencoders/pyircbot"
@@ -30,8 +36,12 @@ class RedditManager:
                 selected = random.choice(max_list)
                 res = "%s: I am BOT, do not waste your time! Instead > " % nick
                 retrieved_list.append(res + str(selected) + "  " + selected.short_link)
-        except requests.exceptions.HTTPError:
+        except requests.exceptions.HTTPError, e:
+            sys.stderr.write("HTTPError: %s\n" % e)
             retrieved_list.append("[REDDIT] %s is not a valid subject" % subject)
+            return retrieved_list
         finally:            
+            if len(retrieved_list) == 0:
+                retrieved_list.append("[Reddit] Nothing found for \"%s\" :(" % subject)
             return retrieved_list
 
