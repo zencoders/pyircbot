@@ -10,7 +10,6 @@ A simple python-twisted IRC bot with greetings and karma functionalities. Presen
 ### TODO
 
 * Anti-Flooding
-* Dice rolling
 * Last tweets
 * Last news
 * Random BOT responses

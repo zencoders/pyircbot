@@ -1,5 +1,6 @@
 import time
 import sqlite3
+import unicodedata as ud
 from config import ConfigManager
 
 class KarmaManager():
@@ -43,6 +44,7 @@ class KarmaManager():
         """Returns a message with the value of Karma for a specific user (fetched by his nickname)"""
 
         if nick:
+            nick = self.strip_nonascii(nick)
             cursor.execute("SELECT score FROM %s WHERE nick=?" % self.karma_table, (nick,))
             karma_score = cursor.fetchone()
             if karma_score is None:
@@ -51,11 +53,17 @@ class KarmaManager():
 
 
     @db_commit
-    def update_karma(self, cursor, nick, plus=True):
+    def update_karma(self, cursor, nick, plus=True, defense=0):
 
         """Updates the karma value of a user via his nickname"""
+        
+        nick = self.strip_nonascii(nick)
 
-        score = 1 if plus else -1
+        if defense == 0:
+            score = 1 if plus else -1
+        else:
+            score = defense
+
         timestamp = int(time.time())
         cursor.execute("""
             UPDATE %s SET time=?, score=(score + ?) WHERE nick=?
@@ -64,4 +72,17 @@ class KarmaManager():
             cursor.execute("""
                 INSERT INTO %s values (?,?,?)
                 """ % self.karma_table, (timestamp, nick, score))
-        return "Karma hits %s" % nick
+        verb = "blesses" if plus else "hits"
+
+        if defense == -10: # after a kick
+            verb = "DREADFULLY hits"
+        elif defense == -5: # after someone's kicked (spadaccio)
+            verb = "heavily hits"
+
+        return "Karma %s %s" % (verb, nick)
+
+    def strip_nonascii(self, s):
+
+        """This method remove non-ascii chars from argument"""
+
+        return ud.normalize('NFKD', unicode(s) ).encode('ascii','ignore')

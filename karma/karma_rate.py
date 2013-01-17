@@ -3,8 +3,8 @@ from collections import defaultdict
 
 class KarmaRateLimiter(object):
 
-    def __init__(self, timeout=360, penalty=3):
-        """timeout in seconds - default 6 min"""
+    def __init__(self, timeout=60, penalty=3):
+        """timeout in seconds - default 1 min"""
         self.timeout = timeout
         self.penalty = penalty
         # http://goo.gl/ZFmFX

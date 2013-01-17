@@ -9,6 +9,7 @@ from message_logger import MessageLogger
 from karma.karma_manager import KarmaManager
 from karma.karma_rate import KarmaRateLimiter
 from functions.welcome_machine import WelcomeMachine
+from functions.dice_roller import DiceRoller
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -54,23 +55,14 @@ class IRCBot(irc.IRCClient):
         self.identify()
 
 
-    def action(self, user, channel, msg):
-
-        """This will get called when the bot sees someone do an action."""
-
-        # e.g. /me <action>
-        user = user.split('!', 1)[0]
-        self.logger.log("* %s %s" % (user, msg))
-
-
     def privmsg(self, user, channel, msg):
 
         """This will get called when the bot receives a message."""
 
         user = user.split('!', 1)[0]
-        words = msg.split()
+        #words = msg.split()
 
-        
+        # QUERY BOT DIRECTLY
         if channel == self.nickname:
             msg = "It's useless to query this BOT. Consider using !help in #", self.factory.channel
             self.msg(user, msg)
@@ -78,24 +70,36 @@ class IRCBot(irc.IRCClient):
 
         # Otherwise check to see if it is a message directed at me
         n = self.nickname
-        # Check if you are talking with me, like BOT: <msg> || BOT, <msg> || BOT <msg>
-        if msg.startswith((n + ":", n + ",", n)):
-            msg = "%s: I am BOT, do not waste your time!" % user
-            self.msg(channel, msg)
-            self.logger.log("<%s> %s" % (self.nickname, msg))
+        # pattern for matching the bot's nick
+        nickname_pattern = re.compile(n + "(:|,)?\s", flags=re.IGNORECASE)
+        hello_pattern = re.compile("(hi|hello|ciao|hola|aloha)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
+        bravo_pattern = re.compile("(bravo|great)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
+
+        # Check if you are talking with BOT 
+        if nickname_pattern.match(msg):
+            self.msg(channel, "%s: I am BOT, do not waste your time!" % user)
         elif msg.startswith('!'):
             self.evaluate_command(user, channel, msg)
         elif re.match(re.compile('\w+\+\+$|\w+--$'), msg):
             self.karma_update(user, channel, msg)
-        elif words is not None and len(words) == 2: 
-            if words[0].lower().startswith( ( 'hi', 'hello', 'ciao', 'hola') ) and words[1] == n:
-                polite_msg = self.welcome_machine.ciao(user)
-                self.msg(channel, polite_msg)
+        elif hello_pattern.match(msg):
+            polite_msg = self.welcome_machine.ciao(user)
+            self.msg(channel, polite_msg)
+        elif bravo_pattern.match(msg):
+            self.msg(channel, "No hay problema %s ;)" % user)
+
 
     def evaluate_command(self, user, channel, msg):
+
+        """Command parser"""
+
         if self.factory.cm.verbose:
+            # log commands
             self.logger.log("<%s> %s" % (user, msg))
             print "<%s> sends command: %s" % (user,msg)
+
+        # dice command !roll NdF with Faces = 3|4|6|8|10|20
+        dice_pattern = re.compile("!roll\s\d+d([3468]|10|20)", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
         # check for commands starting with bang!
@@ -113,20 +117,45 @@ class IRCBot(irc.IRCClient):
             deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, nick=fetch_user)
             deferred_fetch.addCallback(self.threadSafeMsg)
 
+        elif dice_pattern.match(msg):
+            deferred_roll = threads.deferToThread(DiceRoller.roll, msg)
+            deferred_roll.addCallback(self.threadSafeMsg)
+
+        elif msg == "!randtime":
+            self.msg(channel, "Random Hour:Minute  %d:%.2d" % (random.randint(0,23), random.randint(0,59)) )
+
         elif msg.startswith( ('!commands', '!help') ):
             if len(msg_splits) == 1:
                 self.msg(channel, self._help_command() )
             elif len(msg_splits) == 2:
                 self.msg(channel, self._help_command(msg_splits[1]) )
                 
+
     def userJoined(self, user, channel):
-        """Called when a user joins the channel (10% chance)"""
+
+        """Called when a user joins the channel (with a predetermined probability)"""
+
         ciao_msg = self.welcome_machine.ciao(user)
         if random.randint(1,100) <= self.factory.cm.greeting_probability:
             self.msg(channel, ciao_msg)
 
+
+    def kickedFrom(self, channel, kicker, message):
+
+         """Called when someone kick the bot from the channel"""
+
+         # Karma vengeance first of all of course ^__^
+         vengeance = threads.deferToThread( self.karma_manager.update_karma, kicker, plus=False, defense=-10 )
+         # Rejoin
+         self.join(channel)
+         vengeance.addCallback(self.threadSafeMsg)
+         self.describe(channel, "is angry")
+
+
     def karma_update(self, user, channel, msg):
+
         """Try to modify the Karma for a given nickname"""
+
         receiver_nickname = msg[:-2]
         if receiver_nickname == user:
             self.msg(channel, "%s: you can't alter your own karma!" % user)
@@ -147,19 +176,13 @@ class IRCBot(irc.IRCClient):
             deferred_update = threads.deferToThread( self.karma_manager.update_karma, receiver_nickname, plus=False)
 
         deferred_update.addCallback(self.threadSafeMsg)
-    
-        # TODO (sentenza) add a callback with the fetch operation after a deferred_update ? See #3
-        # Not synchronized!
-        # deferred_fetch_update = threads.deferToThread(self.karma_manager.fetch_karma, nick=receiver_nickname)
-        # deferred_fetch_update.addCallback(self.threadSafeMsg)
-
         #self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
         self.logger.log("%s modified Karma: %s" % (user, receiver_nickname))
 
 
     def threadSafeMsg(self, message):
 
-        """Callback Thread-safe method. Thread created by threads.deferToThread cannot just call 
+        """Thread-safe callback. Thread created by threads.deferToThread cannot just call 
         IRCClient.msg, since that method is not thread-safe."""
 
         # see https://github.com/zencoders/pyircbot/issues/3
@@ -173,12 +196,21 @@ class IRCBot(irc.IRCClient):
         
         """This method returns the help message"""
 
-        help_msg = "Valid commands: !help <command>, !commands, !karma"
+        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !randtime"
         if command is not None:
+
             if command == "karma":
                 help_msg = "!karma [user]: returns user's karma score.  "
                 help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
+
+            elif command == "roll":
+                help_msg = "!roll NdN: roll dice (like D&D: d2, d4, d6, d8, d10, d20)"
+
+            elif command == "randtime":
+                help_msg = "!randtime returns a random 24h (HH:MM) timestamp"
+
             else:
                 help_msg = "%s is not a valid command!" % command
+
         return help_msg
 
