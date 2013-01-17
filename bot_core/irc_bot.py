@@ -23,13 +23,14 @@ class IRCBot(irc.IRCClient):
         try:
             logfile = open(self.factory.log_filename, "a")
         except IOError, error:
-            sys.exit(error)
+            sys.stderr.write("ERROR: %s\n" % error)
+            sys.exit(1)
         self.logger = MessageLogger(logfile)
         self.logger.log(
             "[connected at %s]" %
             time.asctime(time.localtime(time.time()))
         )
-        self.karma_manager = KarmaManager()
+        self.karma_manager = KarmaManager(self.logger)
         self.karmrator = KarmaRateLimiter()
         # Singleton WelcomeMachine class
         self.welcome_machine = WelcomeMachine(self.factory.cm.greetings_file_path)

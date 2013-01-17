@@ -1,28 +1,47 @@
 import time
 import sqlite3
+import sys
 import unicodedata as ud
 from config import ConfigManager
+from contextlib import closing
 
 class KarmaManager():
 
-    def __init__(self):
+    def __init__(self, irc_logger):
         self.conf = ConfigManager()
         self.db_path = self.conf.data_path + "karma.sqlite"
         self.karma_table = "karma"
         self.create_table()
+        self.irc_logger = irc_logger
+        
 
     def db_commit(method):
+
         """Decorator method for managing DB connection, commit, and close"""
+
         # closure
         def inner_procedure(self, *args, **kwargs):
-            connection = sqlite3.connect(self.db_path)
-            cursor = connection.cursor()
-            # Calling the decorated method
-            result = method(self, cursor, *args, **kwargs)
-            connection.commit()
-            cursor.close()
-            return result
+            # Check the DB file
+            try:
+                with closing( sqlite3.connect(self.db_path) ) as connection:
+                    cursor = connection.cursor()
+
+                    # Calling the decorated method
+                    result = method(self, cursor, *args, **kwargs)
+
+                    connection.commit()
+                    cursor.close()
+                    return result
+
+            except Exception, e: # Can't connect
+                err_str = "SQLite3 error: %s\n" % e
+                sys.stderr.write(err_str)
+                self.irc_logger.log(err_str)
+                return "DATABASE ERROR"
+
+
         return inner_procedure
+
 
     @db_commit
     def create_table(self, cursor):
