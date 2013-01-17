@@ -99,7 +99,8 @@ class IRCBot(irc.IRCClient):
             print "<%s> sends command: %s" % (user,msg)
 
         # dice command !roll NdF with Faces = 3|4|6|8|10|20
-        dice_pattern = re.compile("!roll\s\d+d([3468]|10|20)", flags = re.IGNORECASE)
+        dice_pattern = re.compile("!roll\s\d+d([3468]|10|20)$", flags = re.IGNORECASE)
+        rand_pattern = re.compile("!rand\s\d+$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
         # check for commands starting with bang!
@@ -120,6 +121,10 @@ class IRCBot(irc.IRCClient):
         elif dice_pattern.match(msg):
             deferred_roll = threads.deferToThread(DiceRoller.roll, msg)
             deferred_roll.addCallback(self.threadSafeMsg)
+
+        elif rand_pattern.match(msg):
+            if len(msg_splits) == 2:
+                self.msg(channel, "Random number: %d" % (random.randint(0, int(msg_splits[1]) )) )
 
         elif msg == "!randtime":
             self.msg(channel, "Random Hour:Minute  %d:%.2d" % (random.randint(0,23), random.randint(0,59)) )
@@ -196,7 +201,7 @@ class IRCBot(irc.IRCClient):
         
         """This method returns the help message"""
 
-        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !randtime"
+        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime"
         if command is not None:
 
             if command == "karma":
@@ -205,6 +210,9 @@ class IRCBot(irc.IRCClient):
 
             elif command == "roll":
                 help_msg = "!roll NdN: roll dice (like D&D: d2, d4, d6, d8, d10, d20)"
+
+            elif command == "rand":
+                help_msg = "!rand returns randint(0, arg)"
 
             elif command == "randtime":
                 help_msg = "!randtime returns a random 24h (HH:MM) timestamp"
