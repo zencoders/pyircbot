@@ -10,6 +10,7 @@ from karma.karma_manager import KarmaManager
 from karma.karma_rate import KarmaRateLimiter
 from functions.welcome_machine import WelcomeMachine
 from functions.dice_roller import DiceRoller
+from functions.reddit import RedditManager
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -32,6 +33,7 @@ class IRCBot(irc.IRCClient):
         )
         self.karma_manager = KarmaManager(self.logger)
         self.karmrator = KarmaRateLimiter()
+        self.reddit = RedditManager()
         # Singleton WelcomeMachine class
         self.welcome_machine = WelcomeMachine(self.factory.cm.greetings_file_path)
 
@@ -78,7 +80,10 @@ class IRCBot(irc.IRCClient):
 
         # Check if you are talking with BOT 
         if nickname_pattern.match(msg):
-            self.msg(channel, "%s: I am BOT, do not waste your time!" % user)
+            #self.msg(channel, "%s: I am BOT, do not waste your time!" % user)
+            deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
+            deferred_reddit.addCallback(self.threadSafeMsg)
+
         elif msg.startswith('!'):
             self.evaluate_command(user, channel, msg)
         elif re.match(re.compile('\w+\+\+$|\w+--$'), msg):
@@ -102,6 +107,7 @@ class IRCBot(irc.IRCClient):
         # dice command !roll NdF with Faces = 3|4|6|8|10|20
         dice_pattern = re.compile("!roll\s\d+d([3468]|10|20)$", flags = re.IGNORECASE)
         rand_pattern = re.compile("!rand\s\d+$", flags = re.IGNORECASE)
+        reddit_pattern = re.compile("!reddit\s?(\d+|\d+\s\w+)?$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
         # check for commands starting with bang!
@@ -122,6 +128,19 @@ class IRCBot(irc.IRCClient):
         elif dice_pattern.match(msg):
             deferred_roll = threads.deferToThread(DiceRoller.roll, msg)
             deferred_roll.addCallback(self.threadSafeMsg)
+
+        elif reddit_pattern.match(msg):
+            deferred_reddit = None
+            if len(msg_splits) == 1:
+                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot)
+            elif len(msg_splits) == 2:
+                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[1]))
+            elif len(msg_splits) == 3:
+                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[1]), subject=msg_splits[2])
+
+            if deferred_reddit is not None:
+                deferred_reddit.addCallback(self.threadSafeMsg)
+
 
         elif rand_pattern.match(msg):
             if len(msg_splits) == 2:
@@ -193,7 +212,12 @@ class IRCBot(irc.IRCClient):
 
         # see https://github.com/zencoders/pyircbot/issues/3
         chan = "#" + self.factory.channel
-        reactor.callFromThread(self.msg, chan , message)
+        if type(message) is str:
+            reactor.callFromThread(self.msg, chan , message)
+        elif type(message) is list:
+            for el in message:
+                reactor.callFromThread(self.msg, chan , str(el))
+                
 
     def get_current_timestamp(self):
         return time.asctime(time.localtime(time.time()))
@@ -202,7 +226,7 @@ class IRCBot(irc.IRCClient):
         
         """This method returns the help message"""
 
-        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime"
+        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime, !reddit [entries] [subject]"
         if command is not None:
 
             if command == "karma":
@@ -210,13 +234,16 @@ class IRCBot(irc.IRCClient):
                 help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
 
             elif command == "roll":
-                help_msg = "!roll NdN: roll dice (like D&D: d2, d4, d6, d8, d10, d20)"
+                help_msg = "!roll NdN: roll dice (like D&D: d3, d4, d6, d8, d10, d20)"
 
             elif command == "rand":
                 help_msg = "!rand returns randint(0, arg)"
 
             elif command == "randtime":
                 help_msg = "!randtime returns a random 24h (HH:MM) timestamp"
+
+            elif command == "reddit":
+                help_msg = "!reddit [NUMBER] [SUBJECT] to retrieve the latest  NUMBER hot reddit news about SUBJECT, otherwise list the last 3 about computer programming"
 
             else:
                 help_msg = "%s is not a valid command!" % command
