@@ -1,6 +1,6 @@
 import os
 from ConfigParser import SafeConfigParser
-from utility.singleton import Singleton
+from interfaces.singleton import Singleton
 
 class ConfigManager(object):
     """ Configuration Manager Singleton class."""

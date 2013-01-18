@@ -1,15 +1,32 @@
 pyircbot
 ========
 
-A simple python-twisted IRC bot with greetings and karma functionalities. Presently pyircbot has **NOT** chat logging features.
+A simple python-twisted IRC. Presently pyircbot has **NOT** chat logging features.
 
-### Usage
+# Usage
 
-`$ python pyircbot.py --help`
+```
+Usage: pyircbot.py [options]
+    * Basic configuration file 'bot.conf' could be used instead
+    ** Information will be stored in a directory called<CHANNEL>-data
 
-### TODO
+Options:
+  -h, --help            show this help message and exit
+  -s SERVER_ADDRESS, --server=SERVER_ADDRESS
+                        IRC server address, default irc.freenode.net
+  -p PORT, --port=PORT  Server port, default 6667
+  -c CHANNEL, --channel=CHANNEL
+                        Channel name, default zencoders
+  -n NICK, --nick=NICK  Bot nickname zenbot
+  -g GREETING_PROBABILITY, --greeting=GREETING_PROBABILITY
+                        Greeting probability [1 - 100]
+  -v, --verbose         Print a lot of stuff...
+```
 
-* Anti-Flooding
-* Last tweets
-* Last news
-* Random BOT responses
+## Plugins
+
+* karma
+* reddit
+* greetings
+* diceroller
+* random number

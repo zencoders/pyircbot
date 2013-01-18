@@ -39,7 +39,6 @@ class RedditManager:
         except requests.exceptions.HTTPError, e:
             sys.stderr.write("HTTPError: %s\n" % e)
             retrieved_list.append("[REDDIT] %s is not a valid subject" % subject)
-            return retrieved_list
         finally:            
             if len(retrieved_list) == 0:
                 retrieved_list.append("[Reddit] Nothing found for \"%s\" :(" % subject)

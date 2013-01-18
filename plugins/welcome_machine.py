@@ -1,4 +1,4 @@
-from utility.singleton import Singleton
+from interfaces.singleton import Singleton
 import random
 
 class WelcomeMachine:

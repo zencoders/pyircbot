@@ -8,9 +8,9 @@ from twisted.internet import threads, reactor
 from message_logger import MessageLogger
 from karma.karma_manager import KarmaManager
 from karma.karma_rate import KarmaRateLimiter
-from functions.welcome_machine import WelcomeMachine
-from functions.dice_roller import DiceRoller
-from functions.reddit import RedditManager
+from plugins.welcome_machine import WelcomeMachine
+from plugins.dice_roller import DiceRoller
+from plugins.reddit import RedditManager
 
 class IRCBot(irc.IRCClient):
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
@@ -88,7 +88,7 @@ class IRCBot(irc.IRCClient):
         elif nickname_pattern.match(msg):
             deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
             deferred_reddit.addCallback(self.threadSafeMsg)
-        elif re.match(re.compile('\w+\+\+$|\w+--$'), msg):
+        elif re.match(re.compile('\w+\+\+$|\w+--$', re.I), msg):
             self.karma_update(user, channel, msg)
         elif hello_pattern.match(msg):
             polite_msg = self.welcome_machine.ciao(user)
@@ -118,7 +118,7 @@ class IRCBot(irc.IRCClient):
             if len(msg_splits) == 1:
                 fetch_user = user
             elif len(msg_splits) == 2:
-                fetch_user = msg_splits[1]
+                fetch_user = msg_splits[1].lower()
             else: # !karma first two etc
                 return
             # Deferred call 
