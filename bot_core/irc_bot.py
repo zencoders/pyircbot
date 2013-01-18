@@ -76,16 +76,18 @@ class IRCBot(irc.IRCClient):
         # pattern for matching the bot's nick
         nickname_pattern = re.compile(n + "(:|,)?\s", flags=re.IGNORECASE)
         hello_pattern = re.compile("(hi|hello|ciao|hola|aloha)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
-        bravo_pattern = re.compile("(bravo|great)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
+        bravo_pattern = re.compile("(bravo|great|good)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
+        ins = "([sf]uc|vaff|bastar|pezzo di m|coglio)"
+        insult_pattern = re.compile( ins+"(.*)"+n, re.IGNORECASE)
 
+        if insult_pattern.search(msg):
+            self.msg(channel, "%s: jsc -e '{} + []'? HTH >> http://tiny.cc/watman" % user)
+            vengeance = threads.deferToThread( self.karma_manager.update_karma, user, plus=False, defense=-5 )
+            vengeance.addCallback(self.threadSafeMsg)
         # Check if you are talking with BOT 
-        if nickname_pattern.match(msg):
-            #self.msg(channel, "%s: I am BOT, do not waste your time!" % user)
+        elif nickname_pattern.match(msg):
             deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
             deferred_reddit.addCallback(self.threadSafeMsg)
-
-        elif msg.startswith('!'):
-            self.evaluate_command(user, channel, msg)
         elif re.match(re.compile('\w+\+\+$|\w+--$'), msg):
             self.karma_update(user, channel, msg)
         elif hello_pattern.match(msg):
@@ -93,6 +95,8 @@ class IRCBot(irc.IRCClient):
             self.msg(channel, polite_msg)
         elif bravo_pattern.match(msg):
             self.msg(channel, "No hay problema %s ;)" % user)
+        elif msg.startswith('!'):
+            self.evaluate_command(user, channel, msg)
 
 
     def evaluate_command(self, user, channel, msg):
@@ -110,17 +114,13 @@ class IRCBot(irc.IRCClient):
         reddit_pattern = re.compile("!reddit\s?(\d+|\d+\s\w+)?$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
-        # check for commands starting with bang!
         if msg.startswith('!karma'):
-            
             if len(msg_splits) == 1:
                 fetch_user = user
             elif len(msg_splits) == 2:
                 fetch_user = msg_splits[1]
             else: # !karma first two etc
                 return
-
-            # self.msg(channel, self.karma_manager.fetch_karma(fetch_user)) 
             # Deferred call 
             deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, nick=fetch_user)
             deferred_fetch.addCallback(self.threadSafeMsg)
