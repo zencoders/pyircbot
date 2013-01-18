@@ -6,8 +6,8 @@ from twisted.words.protocols import irc
 from twisted.internet import threads, reactor
 
 from message_logger import MessageLogger
-from karma.karma_manager import KarmaManager
-from karma.karma_rate import KarmaRateLimiter
+from plugins.karma_manager import KarmaManager
+from plugins.karma_rate import KarmaRateLimiter
 from plugins.welcome_machine import WelcomeMachine
 from plugins.dice_roller import DiceRoller
 from plugins.reddit import RedditManager
@@ -114,7 +114,7 @@ class IRCBot(irc.IRCClient):
         reddit_pattern = re.compile("!reddit\s?(\d+|\d+\s\w+)?$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
-        if msg.startswith('!karma'):
+        if re.match(re.compile("!karma(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 1:
                 fetch_user = user
             elif len(msg_splits) == 2:
