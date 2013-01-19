@@ -5,13 +5,17 @@ import unicodedata as ud
 from config import ConfigManager
 from contextlib import closing
 
+# TODO (sentenza) refactoring needed - DataManager ?
 class KarmaManager():
 
     def __init__(self, irc_logger):
         self.conf = ConfigManager()
-        self.db_path = self.conf.data_path + "karma.sqlite"
+        self.db_path = self.conf.data_path + "data.sqlite"
+        self.users_table = "users"
         self.karma_table = "karma"
-        self.create_table()
+        self.create_karma_table()
+        self.create_users_table()
+        # TODO (sentenza) Logger.getLogger or Twisted.logger
         self.irc_logger = irc_logger
         
 
@@ -39,44 +43,60 @@ class KarmaManager():
                 self.irc_logger.log(err_str)
                 return "DATABASE ERROR"
 
-
         return inner_procedure
 
 
+    def strip_nonascii(self, s):
+        """This method remove non-ascii chars from argument"""
+        return ud.normalize('NFKD', unicode(s) ).encode('ascii','ignore')
+
+
     @db_commit
-    def create_table(self, cursor):
+    def create_users_table(self, cursor):
+
+        """ Check the existence of the users log table, otherwise create it """
+
+        cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS %s  (
+                        user text PRIMARY KEY,
+                        lastseen INTEGER NOT NULL
+                    )
+                    """ % self.users_table )
+
+
+    @db_commit
+    def create_karma_table(self, cursor):
+
         """ Check the existence of the karma log table, 
         otherwise create it """
 
         cursor.execute("""
                         CREATE TABLE IF NOT EXISTS %s  (
                         time INTEGER NOT NULL,
-                        nick text PRIMARY KEY,
-                        score integer
+                        word TEXT PRIMARY KEY,
+                        score INTEGER
                     )
                     """ % self.karma_table )
 
-
     @db_commit 
-    def fetch_karma(self, cursor, nick=None):
+    def fetch_karma(self, cursor, word):
         
-        """Returns a message with the value of Karma for a specific user (fetched by his nickname)"""
+        """Returns a message with the value of Karma for a specific word"""
 
-        if nick:
-            nick = self.strip_nonascii(nick)
-            cursor.execute("SELECT score FROM %s WHERE nick=?" % self.karma_table, (nick,))
-            karma_score = cursor.fetchone()
-            if karma_score is None:
-                return "Karma is inscrutable for %s" % nick
-            return "%s: %s" % (nick, karma_score[0])
+        word = self.strip_nonascii(word)
+        cursor.execute("SELECT score FROM %s WHERE word=?" % self.karma_table, (word,))
+        karma_score = cursor.fetchone()
+        if karma_score is None:
+            return "Karma is inscrutable for %s" % word
+        return "%s: %s" % (word, karma_score[0])
 
 
     @db_commit
-    def update_karma(self, cursor, nick, plus=True, defense=0):
+    def update_karma(self, cursor, word, plus=True, defense=0):
 
-        """Updates the karma value of a user via his nickname"""
+        """Updates the karma value of a given word"""
         
-        nick = self.strip_nonascii(nick)
+        word = self.strip_nonascii(word)
 
         if defense == 0:
             score = 1 if plus else -1
@@ -85,12 +105,12 @@ class KarmaManager():
 
         timestamp = int(time.time())
         cursor.execute("""
-            UPDATE %s SET time=?, score=(score + ?) WHERE nick=?
-            """ % self.karma_table, (timestamp, score, nick))
+            UPDATE %s SET time=?, score=(score + ?) WHERE word=?
+            """ % self.karma_table, (timestamp, score, word))
         if cursor.rowcount != 1:
             cursor.execute("""
                 INSERT INTO %s values (?,?,?)
-                """ % self.karma_table, (timestamp, nick, score))
+                """ % self.karma_table, (timestamp, word, score))
         verb = "blesses" if plus else "hits"
 
         if defense == -10: # after a kick
@@ -98,10 +118,30 @@ class KarmaManager():
         elif defense == -5: # after someone's kicked (spadaccio)
             verb = "heavily hits"
 
-        return "Karma %s %s" % (verb, nick)
+        return "Karma %s %s" % (verb, word)
 
-    def strip_nonascii(self, s):
 
-        """This method remove non-ascii chars from argument"""
+    @db_commit
+    def record_lastseen(self, cursor, user):
 
-        return ud.normalize('NFKD', unicode(s) ).encode('ascii','ignore')
+        """This method insert or update a user's lastseen timestamp"""
+
+        nick = self.strip_nonascii(user)
+        timestamp = int(time.time())
+        cursor.execute("UPDATE %s SET lastseen=? WHERE user=?" % self.users_table, (timestamp, nick))
+        if cursor.rowcount != 1:
+            cursor.execute("INSERT INTO %s values (?,?)" % self.users_table, (user, timestamp))
+
+
+    @db_commit
+    def user_seen(self, cursor, user):
+
+        """ Returns a string with the lastseen timestamp of the given user """
+
+        nick = self.strip_nonascii(user)
+        cursor.execute("SELECT lastseen FROM %s WHERE user=?" % self.users_table, (user,))
+        lastseen = cursor.fetchone()
+        if lastseen is None:
+            return "I've never seen %s before. And you?" % user
+        return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
+

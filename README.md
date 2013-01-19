@@ -1,9 +1,15 @@
 pyircbot
 ========
 
-A simple python-twisted IRC. Presently pyircbot has **NOT** chat logging features.
+A simple python-twisted IRC. Presently pyircbot has **NOT** chat logging features. 
 
-# Usage
+## Requirements
+
+It requires the praw (Python Reddit API Wrapper) module.
+
+## Usage
+
+` python pyircbot.py
 
 ```
 Usage: pyircbot.py [options]
@@ -25,7 +31,7 @@ Options:
 
 ## Plugins
 
-* karma
+* karma and last seen
 * reddit
 * greetings
 * diceroller

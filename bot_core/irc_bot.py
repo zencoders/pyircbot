@@ -116,14 +116,22 @@ class IRCBot(irc.IRCClient):
 
         if re.match(re.compile("!karma(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 1:
-                fetch_user = user
+                fetch_word = user
             elif len(msg_splits) == 2:
-                fetch_user = msg_splits[1].lower()
+                fetch_word = msg_splits[1].lower()
             else: # !karma first two etc
                 return
             # Deferred call 
-            deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, nick=fetch_user)
+            deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, fetch_word)
             deferred_fetch.addCallback(self.threadSafeMsg)
+
+        if re.match(re.compile("!lastseen(\s)*", re.IGNORECASE), msg):
+            if len(msg_splits) == 2:
+                fetch_user = msg_splits[1].lower()
+            else: # !karma first two etc
+                return
+            deferred_lastseen = threads.deferToThread(self.karma_manager.user_seen, fetch_user)
+            deferred_lastseen.addCallback(self.threadSafeMsg)
 
         elif dice_pattern.match(msg):
             deferred_roll = threads.deferToThread(DiceRoller.roll, msg)
@@ -159,6 +167,9 @@ class IRCBot(irc.IRCClient):
     def userJoined(self, user, channel):
 
         """Called when a user joins the channel (with a predetermined probability)"""
+        
+        deferred_recordseen = threads.deferToThread(self.karma_manager.record_lastseen, user)
+        deferred_recordseen.addCallback(self.threadSafeMsg)
 
         ciao_msg = self.welcome_machine.ciao(user)
         if random.randint(1,100) <= self.factory.cm.greeting_probability:
@@ -182,7 +193,7 @@ class IRCBot(irc.IRCClient):
         """Try to modify the Karma for a given nickname"""
 
         receiver_nickname = msg[:-2]
-        if receiver_nickname == user:
+        if receiver_nickname.lower() == user:
             self.msg(channel, "%s: you can't alter your own karma!" % user)
             return
         limit = self.karmrator.rate_limit(user)
@@ -226,7 +237,8 @@ class IRCBot(irc.IRCClient):
         
         """This method returns the help message"""
 
-        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime, !reddit [entries] [subject]"
+        help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime,"
+        help_msg += "!reddit [entries] [subject], !lastseen USER"
         if command is not None:
 
             if command == "karma":
@@ -244,6 +256,9 @@ class IRCBot(irc.IRCClient):
 
             elif command == "reddit":
                 help_msg = "!reddit [NUMBER] [SUBJECT] to retrieve the latest  NUMBER hot reddit news about SUBJECT, otherwise list the last 3 about computer programming"
+
+            elif command == "lastseen":
+                help_msg = "!lastseen USER returns the datetime of the last USER's join"
 
             else:
                 help_msg = "%s is not a valid command!" % command
