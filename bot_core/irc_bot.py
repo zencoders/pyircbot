@@ -126,13 +126,21 @@ class IRCBot(irc.IRCClient):
             deferred_fetch.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!bestkarma(\s)*$", re.IGNORECASE), msg):
-            deferred_best = threads.deferToThread(self.karma_manager.get_users_karma)
+            deferred_best = threads.deferToThread(self.karma_manager.get_karma_list)
             deferred_best.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!worstkarma(\s)*$", re.IGNORECASE), msg):
-            deferred_worst = threads.deferToThread(self.karma_manager.get_users_karma, desc_order=False)
+            deferred_worst = threads.deferToThread(self.karma_manager.get_karma_list, desc_order=False)
             deferred_worst.addCallback(self.threadSafeMsg)
- 
+
+        if re.match(re.compile("!bestwords(\s)*$", re.IGNORECASE), msg):
+            deferred_bestw = threads.deferToThread(self.karma_manager.get_karma_list, words=True)
+            deferred_bestw.addCallback(self.threadSafeMsg)
+
+        if re.match(re.compile("!worstwords(\s)*$", re.IGNORECASE), msg):
+            deferred_worstw = threads.deferToThread(self.karma_manager.get_karma_list, desc_order=False, words=True)
+            deferred_worstw.addCallback(self.threadSafeMsg)
+
         if re.match(re.compile("!lastseen(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 2:
                 fetch_user = msg_splits[1].lower()
@@ -246,7 +254,8 @@ class IRCBot(irc.IRCClient):
         """This method returns the help message"""
 
         help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime,"
-        help_msg += "!reddit [entries] [subject], !lastseen USER"
+        help_msg += "!reddit [entries] [subject], !lastseen USER, !beskarma, !worstkarma, !bestwords, !worstwords"
+
         if command is not None:
 
             if command == "karma":
@@ -267,6 +276,18 @@ class IRCBot(irc.IRCClient):
 
             elif command == "lastseen":
                 help_msg = "!lastseen USER returns the datetime of the last USER's join"
+
+            elif command == "bestwords":
+                help_msg = "!bestwords returns a list of the most karmed words"
+
+            elif command == "worstwords":
+                help_msg = "!worstwords returns a list of the worst karmed words"
+
+            elif command == "bestkarma":
+                help_msg = "!bestkarma returns a list of the most karmed users"
+
+            elif command == "worstkarma":
+                help_msg = "!worstkarma returns a list of the worst karmed users"
 
             else:
                 help_msg = "%s is not a valid command!" % command
