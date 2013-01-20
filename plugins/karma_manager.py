@@ -145,3 +145,24 @@ class KarmaManager():
             return "I've never seen %s before. And you?" % user
         return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
 
+    @db_commit
+    def get_users_karma(self, cursor, limit=5, desc_order=True):
+
+        """Get a list of LIMIT karma values about words recognized as user"""
+
+        order = "DESC" if desc_order else "ASC"
+        cursor.execute("""SELECT k.word, k.score FROM karma AS k
+                        INNER JOIN users AS u
+                        ON k.word=u.user
+                        ORDER BY k.score %s
+                        LIMIT %d""" % (order, limit) )
+
+        users_karma = cursor.fetchall()
+        if users_karma is None:
+            return ["There is no information about users' karma",]
+        else:
+            karma_list = list()
+            for row in users_karma:
+                karma_list.append(str(row[0]) + ": " + str(row[1]))
+            return karma_list
+

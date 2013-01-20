@@ -125,6 +125,14 @@ class IRCBot(irc.IRCClient):
             deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, fetch_word)
             deferred_fetch.addCallback(self.threadSafeMsg)
 
+        if re.match(re.compile("!bestkarma(\s)*$", re.IGNORECASE), msg):
+            deferred_best = threads.deferToThread(self.karma_manager.get_users_karma)
+            deferred_best.addCallback(self.threadSafeMsg)
+
+        if re.match(re.compile("!worstkarma(\s)*$", re.IGNORECASE), msg):
+            deferred_worst = threads.deferToThread(self.karma_manager.get_users_karma, desc_order=False)
+            deferred_worst.addCallback(self.threadSafeMsg)
+ 
         if re.match(re.compile("!lastseen(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 2:
                 fetch_user = msg_splits[1].lower()

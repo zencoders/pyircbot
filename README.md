@@ -9,7 +9,7 @@ It requires the praw (Python Reddit API Wrapper) module.
 
 ## Usage
 
-` python pyircbot.py
+`$ python pyircbot.py -s irc.network.org -p 6667 -n botnickname`
 
 ```
 Usage: pyircbot.py [options]
@@ -22,7 +22,7 @@ Options:
                         IRC server address, default irc.freenode.net
   -p PORT, --port=PORT  Server port, default 6667
   -c CHANNEL, --channel=CHANNEL
-                        Channel name, default zencoders
+                        Channel name, default mychannel
   -n NICK, --nick=NICK  Bot nickname zenbot
   -g GREETING_PROBABILITY, --greeting=GREETING_PROBABILITY
                         Greeting probability [1 - 100]
