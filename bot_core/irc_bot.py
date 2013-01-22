@@ -88,7 +88,7 @@ class IRCBot(irc.IRCClient):
         elif nickname_pattern.match(msg):
             deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
             deferred_reddit.addCallback(self.threadSafeMsg)
-        elif re.match(re.compile('\w+\+\+$|\w+--$', re.I), msg):
+        elif re.match(re.compile('[\w`]+\+\+$|[\w`]+--$', re.I), msg):
             self.karma_update(user, channel, msg)
         elif hello_pattern.match(msg):
             polite_msg = self.welcome_machine.ciao(user)
@@ -208,8 +208,8 @@ class IRCBot(irc.IRCClient):
 
         """Try to modify the Karma for a given nickname"""
 
-        receiver_nickname = msg[:-2]
-        if receiver_nickname.lower() == user:
+        receiver_nickname = msg[:-2].lower()
+        if receiver_nickname == user:
             self.msg(channel, "%s: you can't alter your own karma!" % user)
             return
         limit = self.karmrator.rate_limit(user)
