@@ -6,7 +6,7 @@ from twisted.words.protocols import irc
 from twisted.internet import threads, reactor
 
 from message_logger import MessageLogger
-from plugins.karma_manager import KarmaManager
+from plugins.data_manager import DataManager
 from plugins.karma_rate import KarmaRateLimiter
 from plugins.welcome_machine import WelcomeMachine
 from plugins.dice_roller import DiceRoller
@@ -31,7 +31,7 @@ class IRCBot(irc.IRCClient):
             "[connected at %s]" %
             time.asctime(time.localtime(time.time()))
         )
-        self.karma_manager = KarmaManager(self.logger)
+        self.data_manager = DataManager(self.logger)
         self.karmrator = KarmaRateLimiter()
         self.reddit = RedditManager()
         # Singleton WelcomeMachine class
@@ -82,7 +82,7 @@ class IRCBot(irc.IRCClient):
 
         if insult_pattern.search(msg):
             self.msg(channel, "%s: jsc -e '{} + []'? HTH >> http://tiny.cc/watman" % user)
-            vengeance = threads.deferToThread( self.karma_manager.update_karma, user, plus=False, defense=-5 )
+            vengeance = threads.deferToThread( self.data_manager.update_karma, user, plus=False, defense=-5 )
             vengeance.addCallback(self.threadSafeMsg)
         # Check if you are talking with BOT 
         elif nickname_pattern.match(msg):
@@ -114,7 +114,7 @@ class IRCBot(irc.IRCClient):
         reddit_pattern = re.compile("!reddit\s?(\d+|\d+\s\w+)?$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
-        if re.match(re.compile("!karma(\s)*", re.IGNORECASE), msg):
+        if re.match(re.compile("!(karma|k)(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 1:
                 fetch_word = user
             elif len(msg_splits) == 2:
@@ -122,31 +122,31 @@ class IRCBot(irc.IRCClient):
             else: # !karma first two etc
                 return
             # Deferred call 
-            deferred_fetch = threads.deferToThread(self.karma_manager.fetch_karma, fetch_word)
+            deferred_fetch = threads.deferToThread(self.data_manager.fetch_karma, fetch_word)
             deferred_fetch.addCallback(self.threadSafeMsg)
 
-        if re.match(re.compile("!bestkarma(\s)*$", re.IGNORECASE), msg):
-            deferred_best = threads.deferToThread(self.karma_manager.get_karma_list)
+        if re.match(re.compile("!(bestkarma|bk)(\s)*$", re.IGNORECASE), msg):
+            deferred_best = threads.deferToThread(self.data_manager.get_karma_list)
             deferred_best.addCallback(self.threadSafeMsg)
 
-        if re.match(re.compile("!worstkarma(\s)*$", re.IGNORECASE), msg):
-            deferred_worst = threads.deferToThread(self.karma_manager.get_karma_list, desc_order=False)
+        if re.match(re.compile("!(worstkarma|wk)(\s)*$", re.IGNORECASE), msg):
+            deferred_worst = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False)
             deferred_worst.addCallback(self.threadSafeMsg)
 
-        if re.match(re.compile("!bestwords(\s)*$", re.IGNORECASE), msg):
-            deferred_bestw = threads.deferToThread(self.karma_manager.get_karma_list, words=True)
+        if re.match(re.compile("!(bestwords|bw)(\s)*$", re.IGNORECASE), msg):
+            deferred_bestw = threads.deferToThread(self.data_manager.get_karma_list, words=True)
             deferred_bestw.addCallback(self.threadSafeMsg)
 
-        if re.match(re.compile("!worstwords(\s)*$", re.IGNORECASE), msg):
-            deferred_worstw = threads.deferToThread(self.karma_manager.get_karma_list, desc_order=False, words=True)
+        if re.match(re.compile("!(worstwords|ww)(\s)*$", re.IGNORECASE), msg):
+            deferred_worstw = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False, words=True)
             deferred_worstw.addCallback(self.threadSafeMsg)
 
-        if re.match(re.compile("!lastseen(\s)*", re.IGNORECASE), msg):
+        if re.match(re.compile("!(lastseen|ls)(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 2:
                 fetch_user = msg_splits[1].lower()
             else: # !karma first two etc
                 return
-            deferred_lastseen = threads.deferToThread(self.karma_manager.user_seen, fetch_user)
+            deferred_lastseen = threads.deferToThread(self.data_manager.user_seen, fetch_user)
             deferred_lastseen.addCallback(self.threadSafeMsg)
 
         elif dice_pattern.match(msg):
@@ -184,7 +184,7 @@ class IRCBot(irc.IRCClient):
 
         """Called when a user joins the channel (with a predetermined probability)"""
         
-        deferred_recordseen = threads.deferToThread(self.karma_manager.record_lastseen, user)
+        deferred_recordseen = threads.deferToThread(self.data_manager.record_lastseen, user)
         deferred_recordseen.addCallback(self.threadSafeMsg)
 
         ciao_msg = self.welcome_machine.ciao(user)
@@ -197,7 +197,7 @@ class IRCBot(irc.IRCClient):
          """Called when someone kick the bot from the channel"""
 
          # Karma vengeance first of all of course ^__^
-         vengeance = threads.deferToThread( self.karma_manager.update_karma, kicker, plus=False, defense=-10 )
+         vengeance = threads.deferToThread( self.data_manager.update_karma, kicker, plus=False, defense=-10 )
          # Rejoin
          self.join(channel)
          vengeance.addCallback(self.threadSafeMsg)
@@ -220,15 +220,15 @@ class IRCBot(irc.IRCClient):
         if limit == 1:
             # Penalize User
             self.msg(channel, "%s: I warned you... Now you have lost karma. :(" % user )
-            deferred_update = threads.deferToThread(self.karma_manager.update_karma, user, plus=False)
+            deferred_update = threads.deferToThread(self.data_manager.update_karma, user, plus=False)
             return
         if msg.endswith('++'):
-            deferred_update = threads.deferToThread(self.karma_manager.update_karma, receiver_nickname, plus=True)
+            deferred_update = threads.deferToThread(self.data_manager.update_karma, receiver_nickname, plus=True)
         if msg.endswith('--'):
-            deferred_update = threads.deferToThread( self.karma_manager.update_karma, receiver_nickname, plus=False)
+            deferred_update = threads.deferToThread( self.data_manager.update_karma, receiver_nickname, plus=False)
 
         deferred_update.addCallback(self.threadSafeMsg)
-        #self.msg(channel, self.karma_manager.fetch_karma(receiver_nickname)) 
+        #self.msg(channel, self.data_manager.fetch_karma(receiver_nickname)) 
         self.logger.log("%s modified Karma: %s" % (user, receiver_nickname))
 
 
@@ -259,7 +259,7 @@ class IRCBot(irc.IRCClient):
         if command is not None:
 
             if command == "karma":
-                help_msg = "!karma [user]: returns user's karma score.  "
+                help_msg = "!karma [user]: returns user's karma score. (Compact form: !k) "
                 help_msg += "<user>++ or <user>-- to modify karma score of the specified user." 
 
             elif command == "roll":
@@ -275,19 +275,19 @@ class IRCBot(irc.IRCClient):
                 help_msg = "!reddit [NUMBER] [SUBJECT] to retrieve the latest  NUMBER hot reddit news about SUBJECT, otherwise list the last 3 about computer programming"
 
             elif command == "lastseen":
-                help_msg = "!lastseen USER returns the datetime of the last USER's join"
+                help_msg = "!lastseen USER returns the datetime of the last USER's join. Short form: !ls"
 
             elif command == "bestwords":
-                help_msg = "!bestwords returns a list of the most karmed words"
+                help_msg = "!bestwords returns a list of the most karmed words. Short form: !bw"
 
             elif command == "worstwords":
-                help_msg = "!worstwords returns a list of the worst karmed words"
+                help_msg = "!worstwords returns a list of the worst karmed words. Short form: !ww"
 
             elif command == "bestkarma":
-                help_msg = "!bestkarma returns a list of the most karmed users"
+                help_msg = "!bestkarma returns a list of the most karmed users. Short form: !bk"
 
             elif command == "worstkarma":
-                help_msg = "!worstkarma returns a list of the worst karmed users"
+                help_msg = "!worstkarma returns a list of the worst karmed users. Short form: !wk"
 
             else:
                 help_msg = "%s is not a valid command!" % command

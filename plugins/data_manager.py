@@ -5,8 +5,7 @@ import unicodedata as ud
 from config import ConfigManager
 from contextlib import closing
 
-# TODO (sentenza) refactoring needed - DataManager ?
-class KarmaManager():
+class DataManager():
 
     def __init__(self, irc_logger):
         self.conf = ConfigManager()
@@ -146,9 +145,9 @@ class KarmaManager():
         return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
 
     @db_commit
-    def get_karma_list(self, cursor, limit=5, desc_order=True, words=False):
+    def get_karma_list(self, cursor, limit=10, desc_order=True, words=False):
 
-        """Get a list of LIMIT karma values about words recognized as user"""
+        """Get a list of LIMIT karma values about words or users"""
 
         order = "DESC" if desc_order else "ASC"
 
@@ -168,12 +167,13 @@ class KarmaManager():
 
         cursor.execute(query % (order, limit) )
 
-        karma_records = cursor.fetchall()
-        if karma_records is None:
-            return ["There is no information about users' karma",]
+        rows = cursor.fetchall()
+        if len(rows) == 0:
+            r = "users' karma" if not words else "words"
+            return ["There is no information about " + r,]
         else:
-            karma_list = list()
-            for row in karma_records:
-                karma_list.append(str(row[0]) + ": " + str(row[1]))
-            return karma_list
+            results_list = list()
+            for row in rows:
+                results_list.append(str(row[0]) + ": " + str(row[1]))
+            return results_list
 
