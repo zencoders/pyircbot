@@ -184,7 +184,7 @@ class IRCBot(irc.IRCClient):
 
         """Called when a user joins the channel (with a predetermined probability)"""
         
-        deferred_recordseen = threads.deferToThread(self.data_manager.record_lastseen, user)
+        deferred_recordseen = threads.deferToThread(self.data_manager.record_lastseen, user.lower())
         deferred_recordseen.addCallback(self.threadSafeMsg)
 
         ciao_msg = self.welcome_machine.ciao(user)
