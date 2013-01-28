@@ -76,16 +76,20 @@ class IRCBot(irc.IRCClient):
         # pattern for matching the bot's nick
         nickname_pattern = re.compile(n + "(:|,)?\s", flags=re.IGNORECASE)
         hello_pattern = re.compile("(hi|hello|ciao|hola|aloha)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
+        goodbye_pattern = re.compile("(goodbye|bye|see you|see ya|see u)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
         bravo_pattern = re.compile("(bravo|great|good)\s" + n + "(!|\s)?$", flags=re.IGNORECASE)
-        ins = "([sf]uc|vaff|bastar|pezzo di m|coglio)"
-        insult_pattern = re.compile( ins+"(.*)"+n, re.IGNORECASE)
 
-        if insult_pattern.search(msg):
-            self.msg(channel, "%s: jsc -e '{} + []'? HTH >> http://tiny.cc/watman" % user)
-            vengeance = threads.deferToThread( self.data_manager.update_karma, user, plus=False, defense=-5 )
-            vengeance.addCallback(self.threadSafeMsg)
+        # TODO (sentenza) fix this check
+        #ins = "([sf]uc|vaff|bastar|pezzo di m|coglio)"
+        #insult_pattern = re.compile( ins+"(.*)"+n, re.IGNORECASE)
+
+        #if insult_pattern.search(msg):
+        #    self.msg(channel, "%s: jsc -e '{} + []'? HTH >> http://tiny.cc/watman" % user)
+        #    vengeance = threads.deferToThread( self.data_manager.update_karma, user, plus=False, defense=-5 )
+        #    vengeance.addCallback(self.threadSafeMsg)
+
         # Check if you are talking with BOT 
-        elif nickname_pattern.match(msg):
+        if nickname_pattern.match(msg):
             deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
             deferred_reddit.addCallback(self.threadSafeMsg)
         elif re.match(re.compile('[\w`]+\+\+$|[\w`]+--$', re.I), msg):
@@ -93,6 +97,8 @@ class IRCBot(irc.IRCClient):
         elif hello_pattern.match(msg):
             polite_msg = self.welcome_machine.ciao(user)
             self.msg(channel, polite_msg)
+        elif goodbye_pattern.match(msg):
+            self.msg(channel, "Hasta la vista, %s." % user)
         elif bravo_pattern.match(msg):
             self.msg(channel, "No hay problema %s ;)" % user)
         elif msg.startswith('!'):
@@ -116,7 +122,7 @@ class IRCBot(irc.IRCClient):
 
         if re.match(re.compile("!(karma|k)(\s)*", re.IGNORECASE), msg):
             if len(msg_splits) == 1:
-                fetch_word = user
+                fetch_word = user.lower()
             elif len(msg_splits) == 2:
                 fetch_word = msg_splits[1].lower()
             else: # !karma first two etc
