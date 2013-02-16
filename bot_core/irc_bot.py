@@ -205,12 +205,13 @@ class IRCBot(irc.IRCClient):
 
          """Called when someone kick the bot from the channel"""
 
-         # Karma vengeance first of all of course ^__^
-         vengeance = threads.deferToThread( self.data_manager.update_karma, kicker, plus=False, defense=-10 )
+         # Karma vengeance first of all of course ^__^ Fix TODO
+         # vengeance = threads.deferToThread( self.data_manager.update_karma, kicker.lower(), plus=False, defense=-10 )
          # Rejoin
          self.join(channel)
-         vengeance.addCallback(self.threadSafeMsg)
-         self.describe(channel, "is angry")
+         # TODO
+         # vengeance.addCallback(self.threadSafeMsg)
+         # self.describe(channel, "is angry")
 
 
     def karma_update(self, user, channel, msg):
