@@ -145,7 +145,7 @@ class DataManager():
         return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
 
     @db_commit
-    def get_karma_list(self, cursor, limit=10, desc_order=True, words=False):
+    def get_karma_list(self, cursor, limit=50, desc_order=True, words=False, recipient=None):
 
         """Get a list of LIMIT karma values about words or users"""
 
@@ -175,5 +175,9 @@ class DataManager():
             results_list = list()
             for row in rows:
                 results_list.append(str(row[0]) + ": " + str(row[1]))
-            return results_list
+            if recipient is not None:
+                # In this case the recipient user is specified, then send him a query
+                return {'msglist': results_list, 'recipient': recipient}
+            else:
+                return results_list
 

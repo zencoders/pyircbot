@@ -5,7 +5,7 @@ except ImportError, e:
     sys.stderr.write(e)
 import random
 
-MAX_ENTRIES = 10 # max articles returned
+MAX_ENTRIES = 30 # max articles returned
 
 class RedditManager:
 
@@ -15,7 +15,7 @@ class RedditManager:
         bot_user_agent = "pyircbot v0.1 by /u/sentenza github.com/zencoders/pyircbot"
         self.reddit = praw.UnauthenticatedReddit(user_agent=bot_user_agent)
 
-    def retrieve_hot(self, subject="programming", num_entries=3, rand=False, nick=None):
+    def retrieve_hot(self, subject="programming", num_entries=5, rand=False, nick=None, public=False):
 
         """ This method returns a list of num_entries hop articles OR a single pseudo-random top story 
         selected from the first top 100 entries """
@@ -36,11 +36,16 @@ class RedditManager:
                 selected = random.choice(max_list)
                 res = "%s: I am BOT, do not waste your time! Instead > " % nick
                 retrieved_list.append(res + str(selected) + "  " + selected.short_link)
+
         except requests.exceptions.HTTPError, e:
             sys.stderr.write("HTTPError: %s\n" % e)
             retrieved_list.append("[REDDIT] %s is not a valid subject" % subject)
         finally:            
             if len(retrieved_list) == 0:
                 retrieved_list.append("[Reddit] Nothing found for \"%s\" :(" % subject)
-            return retrieved_list
+            
+            if public:
+                return retrieved_list
+            elif not public and nick is not None:
+                return {'msglist': retrieved_list, 'recipient': nick}
 

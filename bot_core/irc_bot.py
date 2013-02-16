@@ -90,7 +90,7 @@ class IRCBot(irc.IRCClient):
 
         # Check if you are talking with BOT 
         if nickname_pattern.match(msg):
-            deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user)
+            deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, rand=True, nick=user, public=True)
             deferred_reddit.addCallback(self.threadSafeMsg)
         elif re.match(re.compile('[\w`]+\+\+$|[\w`]+--$', re.I), msg):
             self.karma_update(user, channel, msg)
@@ -117,7 +117,7 @@ class IRCBot(irc.IRCClient):
         # dice command !roll NdF with Faces = 3|4|6|8|10|20
         dice_pattern = re.compile("!roll\s\d+d([3468]|10|20)$", flags = re.IGNORECASE)
         rand_pattern = re.compile("!rand\s\d+$", flags = re.IGNORECASE)
-        reddit_pattern = re.compile("!reddit\s?(\d+|\d+\s\w+)?$", flags = re.IGNORECASE)
+        reddit_pattern = re.compile("!reddit\s?(\d+|\w+(\s\d+)?)?$", flags = re.IGNORECASE)
         msg_splits = msg.split()
 
         if re.match(re.compile("!(karma|k)(\s)*", re.IGNORECASE), msg):
@@ -132,19 +132,19 @@ class IRCBot(irc.IRCClient):
             deferred_fetch.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!(bestkarma|bk)(\s)*$", re.IGNORECASE), msg):
-            deferred_best = threads.deferToThread(self.data_manager.get_karma_list)
+            deferred_best = threads.deferToThread(self.data_manager.get_karma_list, recipient=user)
             deferred_best.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!(worstkarma|wk)(\s)*$", re.IGNORECASE), msg):
-            deferred_worst = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False)
+            deferred_worst = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False, recipient=user)
             deferred_worst.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!(bestwords|bw)(\s)*$", re.IGNORECASE), msg):
-            deferred_bestw = threads.deferToThread(self.data_manager.get_karma_list, words=True)
+            deferred_bestw = threads.deferToThread(self.data_manager.get_karma_list, words=True, recipient=user)
             deferred_bestw.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!(worstwords|ww)(\s)*$", re.IGNORECASE), msg):
-            deferred_worstw = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False, words=True)
+            deferred_worstw = threads.deferToThread(self.data_manager.get_karma_list, desc_order=False, words=True, recipient=user)
             deferred_worstw.addCallback(self.threadSafeMsg)
 
         if re.match(re.compile("!(lastseen|ls)(\s)*", re.IGNORECASE), msg):
@@ -162,11 +162,14 @@ class IRCBot(irc.IRCClient):
         elif reddit_pattern.match(msg):
             deferred_reddit = None
             if len(msg_splits) == 1:
-                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot)
+                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, nick=user)
             elif len(msg_splits) == 2:
-                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[1]))
+                if msg_splits[1].isdigit():
+                    deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[1]), nick=user)
+                else:
+                    deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, subject=msg_splits[1], nick=user)
             elif len(msg_splits) == 3:
-                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[1]), subject=msg_splits[2])
+                deferred_reddit = threads.deferToThread(self.reddit.retrieve_hot, num_entries=int(msg_splits[2]), subject=msg_splits[1], nick=user)
 
             if deferred_reddit is not None:
                 deferred_reddit.addCallback(self.threadSafeMsg)
@@ -250,6 +253,9 @@ class IRCBot(irc.IRCClient):
         elif type(message) is list:
             for el in message:
                 reactor.callFromThread(self.msg, chan , str(el))
+        elif type(message) is dict:
+            for el in message['msglist']:
+                reactor.callFromThread(self.msg, message['recipient'] , str(el))
                 
 
     def get_current_timestamp(self):
@@ -278,7 +284,7 @@ class IRCBot(irc.IRCClient):
                 help_msg = "!randtime returns a random 24h (HH:MM) timestamp"
 
             elif command == "reddit":
-                help_msg = "!reddit [NUMBER] [SUBJECT] to retrieve the latest  NUMBER hot reddit news about SUBJECT, otherwise list the last 3 about computer programming"
+                help_msg = "!reddit [NUMBER] / [SUBJECT] [NUMBER] to retrieve the latest  NUMBER hot reddit news about SUBJECT, otherwise list the last 5 about computer programming"
 
             elif command == "lastseen":
                 help_msg = "!lastseen USER returns the datetime of the last USER's join. Short form: !ls"
