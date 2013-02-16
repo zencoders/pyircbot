@@ -13,7 +13,10 @@ from plugins.dice_roller import DiceRoller
 from plugins.reddit import RedditManager
 
 class IRCBot(irc.IRCClient):
+    
     """Python Twisted IRC BOT. irc.IRCClient specialization."""
+    
+    lineRate = 1
     
     def _get_nickname(self):
         return self.factory.nickname

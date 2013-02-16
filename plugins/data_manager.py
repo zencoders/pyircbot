@@ -145,7 +145,7 @@ class DataManager():
         return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
 
     @db_commit
-    def get_karma_list(self, cursor, limit=50, desc_order=True, words=False, recipient=None):
+    def get_karma_list(self, cursor, limit=20, desc_order=True, words=False, recipient=None):
 
         """Get a list of LIMIT karma values about words or users"""
 
