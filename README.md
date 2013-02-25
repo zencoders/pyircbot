@@ -36,3 +36,4 @@ Options:
 * greetings
 * diceroller
 * random number
+* Star Trek stardate

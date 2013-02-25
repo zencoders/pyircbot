@@ -11,6 +11,7 @@ from plugins.karma_rate import KarmaRateLimiter
 from plugins.welcome_machine import WelcomeMachine
 from plugins.dice_roller import DiceRoller
 from plugins.reddit import RedditManager
+from plugins.star_date import StarDate
 
 class IRCBot(irc.IRCClient):
     
@@ -184,6 +185,9 @@ class IRCBot(irc.IRCClient):
 
         elif msg == "!randtime":
             self.msg(channel, "Random Hour:Minute  %d:%.2d" % (random.randint(0,23), random.randint(0,59)) )
+        
+        elif msg == "!stardate":
+            self.msg(channel, StarDate.current_stardate())
 
         elif msg.startswith( ('!commands', '!help') ):
             if len(msg_splits) == 1:
@@ -270,7 +274,7 @@ class IRCBot(irc.IRCClient):
         """This method returns the help message"""
 
         help_msg = "Valid commands: !help <command>, !commands, !karma [user], !roll Nd(3|4|6|8|10|20), !rand arg, !randtime,"
-        help_msg += "!reddit [entries] [subject], !lastseen USER, !beskarma, !worstkarma, !bestwords, !worstwords"
+        help_msg += "!reddit [entries] [subject], !lastseen USER, !beskarma, !worstkarma, !bestwords, !worstwords, !stardate"
 
         if command is not None:
 
@@ -304,6 +308,9 @@ class IRCBot(irc.IRCClient):
 
             elif command == "worstkarma":
                 help_msg = "!worstkarma returns a list of the worst karmed users. Short form: !wk"
+
+            elif command == "stardate":
+                help_msg = "!stardate returns the current Star Trek stardate (info [it] http://it.wikipedia.org/wiki/Data_stellare - Test: http://goo.gl/DEc4n)"
 
             else:
                 help_msg = "%s is not a valid command!" % command
