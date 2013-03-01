@@ -225,10 +225,11 @@ class IRCBot(irc.IRCClient):
 
         """Try to modify the Karma for a given nickname"""
 
-        receiver_nickname = msg[:-2].lower()
+        receiver_nickname = msg[:-2]
         if receiver_nickname == user:
             self.msg(channel, "%s: you can't alter your own karma!" % user)
             return
+        receiver_nickname = receiver_nickname.lower()
         limit = self.karmrator.rate_limit(user)
         if  limit == 2:
             waiting_minutes = self.karmrator.user_timeout(user)
