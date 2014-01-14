@@ -5,7 +5,19 @@ A simple python-twisted IRC. Presently pyircbot has **NOT** chat logging feature
 
 ## Requirements
 
-It requires the praw (Python Reddit API Wrapper) module.
+It requires [python-twisted](http://twistedmatrix.com) and the praw (Python Reddit API Wrapper) module.
+
+For a Debian-based Linux distribution you could install Python Twisted as follows:
+
+```
+# apt-get install python-twisted
+```
+
+Then install praw with pip:
+
+```
+$ pip install praw
+```
 
 ## Usage
 
