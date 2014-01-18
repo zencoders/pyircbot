@@ -12,8 +12,8 @@ class RedditManager:
     """Manager for reddit entries. It's based on top of the Python Reddit API Wrapper"""
 
     def __init__(self):
-        bot_user_agent = "pyircbot v0.1 by /u/sentenza github.com/zencoders/pyircbot"
-        self.reddit = praw.UnauthenticatedReddit(user_agent=bot_user_agent)
+        bot_user_agent = "pyircbot by /u/sentenza v 0.2 URL: https://github.com/zencoders/pyircbot"
+        self.reddit = praw.Reddit(user_agent=bot_user_agent)
 
     def retrieve_hot(self, subject="programming", num_entries=5, rand=False, nick=None, public=False):
 
