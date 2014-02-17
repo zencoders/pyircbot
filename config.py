@@ -14,10 +14,12 @@ class ConfigManager(object):
         config_file_path = os.path.join(__location__, 'bot.conf')
 #        print "Config file path", config_file_path
         default_config_value = ["[pyircbot]\n",
-        "server = irc.freenode.net\n",
-        "port = 6667\n",
-        "channel = pyircbotroom\n",
-        "nick = pyircbot\n"]
+                                "server = irc.freenode.net\n",
+                                "port = 6667\n",
+                                "channel = pyircbotroom\n",
+                                "nick = pyircbot\n",
+                                "greeting = 100\n",
+                                "timezone = Europe/Rome\n"]
         
         # If the config file is not present try to restore it
         try:
@@ -35,9 +37,10 @@ class ConfigManager(object):
         self._server_port = self._config_parser.get('pyircbot', 'port')
         self._channel = self._config_parser.get('pyircbot', 'channel')
         self._bot_nick = self._config_parser.get('pyircbot', 'nick')
+        self.greeting_probability = self._config_parser.get('pyircbot', 'greeting')
+        self._timezone = self._config_parser.get('pyircbot', 'timezone')
         self._verbose = False
         self._update_data_path()
-        self.greeting_probability = 30
 
     def _update_data_path(self):
         """Internal method called to update information about data folder. Data folder path depends on channel name."""
@@ -56,7 +59,7 @@ class ConfigManager(object):
 
     @property
     def server_port(self):
-        return self._server_port
+        return int(self._server_port)
 
     @server_port.setter
     def server_port(self, value):
@@ -91,4 +94,10 @@ class ConfigManager(object):
     def verbose(self, bool_value):
         self._verbose = bool_value
 
+    @property
+    def timezone(self):
+        return self._timezone
 
+    @timezone.setter
+    def timezone(self, value):
+        self._timezone = value

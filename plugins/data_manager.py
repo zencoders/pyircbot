@@ -1,4 +1,7 @@
 import time
+from datetime import datetime
+from pytz import timezone as pytz_timezone
+from pytz import utc as pytz_utc
 import sqlite3
 import sys
 import unicodedata as ud
@@ -49,6 +52,14 @@ class DataManager():
         """This method remove non-ascii chars from argument"""
         return ud.normalize('NFKD', unicode(s) ).encode('ascii','ignore')
 
+    def get_localized_time(self, utc_timestamp):
+        """Return localized datetime from a timestamp"""
+        conf_tz = self.conf.timezone
+        local_tz = pytz_timezone(conf_tz)
+        utc_tz = pytz_utc
+        # Localize the date string as a UTC datetime, then use astimezone to convert it to the local timezone
+        local_dt = utc_tz.localize(datetime.utcfromtimestamp(utc_timestamp)).astimezone(local_tz)
+        return local_dt.strftime('%Y-%m-%d at %H:%M %Z')
 
     @db_commit
     def create_users_table(self, cursor):
@@ -142,7 +153,7 @@ class DataManager():
         lastseen = cursor.fetchone()
         if lastseen is None:
             return "I've never seen %s before. And you?" % user
-        return "%s was seen: %s" % (user, time.ctime(lastseen[0]))
+        return "%s was seen: %s" % (user, self.get_localized_time(lastseen[0]))
 
     @db_commit
     def get_karma_list(self, cursor, limit=20, desc_order=True, words=False, recipient=None):
