@@ -1,7 +1,7 @@
 pyircbot
 ========
 
-A simple python-twisted IRC. Presently pyircbot has **NOT** chat logging features. 
+A simple python-twisted IRC bot. Presently pyircbot has **NOT** chat logging features. 
 
 ## Requirements
 
